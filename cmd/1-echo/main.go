@@ -1,6 +1,5 @@
 package main
 
-// import "log"
 import (
 	"encoding/json"
 	"log"
