@@ -11,3 +11,6 @@ test-unique-ids: build
 
 test-broadcast-single: build
     nix run .#maelstrom -- test -w broadcast --bin ./result/bin/3-broadcast --node-count 1 --time-limit 20 --rate 10
+
+test-broadcast-multi: build
+    nix run .#maelstrom -- test -w broadcast --bin ./result/bin/3-broadcast --node-count 5 --time-limit 20 --rate 10
