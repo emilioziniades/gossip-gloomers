@@ -54,7 +54,7 @@
         pname = "fly-io-dist-sys";
         version = "0.0.1";
         src = ./.;
-        vendorHash = "sha256-ISS2qma139Jz9eDxLJvULkqDZeu1vyx9ot4uO0LIVho";
+        vendorHash = "sha256-v1bYSWwfIo6azkNM+DgxK5oKnZuDTe1k2wSCKk0vdos=";
       };
     });
   };
