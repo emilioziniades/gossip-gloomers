@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"sync"
+	"time"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
 )
@@ -26,14 +27,46 @@ type broadcastRequest struct {
 	Message int    `json:"message"`
 }
 
+type message struct {
+	destination string
+	number      int
+}
+
 func main() {
 	var (
 		messages     = make(map[int]struct{})
 		messagesLock = sync.Mutex{}
-		topology     = make(map[string][]string)
+
+		messagesToSend     = make(map[message]struct{})
+		messagesToSendLock = sync.Mutex{}
+
+		neighbours = []string{}
 	)
 
 	n := maelstrom.NewNode()
+
+	// resend messages until success
+	go func() {
+		for {
+			messagesToSendLock.Lock()
+			for msgToSend := range messagesToSend {
+				n.RPC(msgToSend.destination,
+					broadcastRequest{
+						Type:    "broadcast",
+						Message: msgToSend.number,
+					},
+					func(msg maelstrom.Message) error {
+						messagesToSendLock.Lock()
+						delete(messagesToSend, msgToSend)
+						messagesToSendLock.Unlock()
+
+						return nil
+					})
+			}
+			messagesToSendLock.Unlock()
+			time.Sleep(time.Millisecond * 100)
+		}
+	}()
 
 	n.Handle("broadcast", func(msg maelstrom.Message) error {
 		var req broadcastRequest
@@ -46,8 +79,14 @@ func main() {
 		messagesLock.Unlock()
 
 		if !exists {
-			for _, neighbour := range topology[n.ID()] {
-				n.Send(neighbour, req)
+			for _, neighbour := range neighbours {
+				if neighbour == msg.Src {
+					continue
+				}
+				messagesToSendLock.Lock()
+				messagesToSend[message{destination: neighbour, number: req.Message}] = struct{}{}
+				messagesToSendLock.Unlock()
+
 			}
 		}
 
@@ -58,11 +97,8 @@ func main() {
 		resp := response{
 			Type: "broadcast_ok",
 		}
-		return n.Reply(msg, resp)
-	})
 
-	n.Handle("broadcast_ok", func(msg maelstrom.Message) error {
-		return nil
+		return n.Reply(msg, resp)
 	})
 
 	n.Handle("read", func(msg maelstrom.Message) error {
@@ -88,8 +124,7 @@ func main() {
 			return err
 		}
 
-		topology = req.Topology
-		log.Println(topology)
+		neighbours = req.Topology[n.ID()]
 
 		resp := response{
 			Type: "topology_ok",
@@ -101,5 +136,4 @@ func main() {
 	if err := n.Run(); err != nil {
 		log.Fatal(err)
 	}
-
 }
