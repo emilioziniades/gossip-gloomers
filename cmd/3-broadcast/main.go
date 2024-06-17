@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
+	"sync"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
 )
@@ -28,8 +28,9 @@ type broadcastRequest struct {
 
 func main() {
 	var (
-		messages = make(map[int]struct{})
-		topology = make(map[string][]string)
+		messages     = make(map[int]struct{})
+		messagesLock = sync.Mutex{}
+		topology     = make(map[string][]string)
 	)
 
 	n := maelstrom.NewNode()
@@ -40,14 +41,19 @@ func main() {
 			return err
 		}
 
-		if _, exists := messages[req.Message]; !exists {
-			for neighbour := range topology[n.ID()] {
-				neighbourId := fmt.Sprintf("n%d", neighbour)
-				n.Send(neighbourId, req)
+		messagesLock.Lock()
+		_, exists := messages[req.Message]
+		messagesLock.Unlock()
+
+		if !exists {
+			for _, neighbour := range topology[n.ID()] {
+				n.Send(neighbour, req)
 			}
 		}
 
+		messagesLock.Lock()
 		messages[req.Message] = struct{}{}
+		messagesLock.Unlock()
 
 		resp := response{
 			Type: "broadcast_ok",
@@ -61,9 +67,12 @@ func main() {
 
 	n.Handle("read", func(msg maelstrom.Message) error {
 		var msgs []int
+
+		messagesLock.Lock()
 		for msg := range messages {
 			msgs = append(msgs, msg)
 		}
+		messagesLock.Unlock()
 
 		resp := readResponse{
 			Type:     "read_ok",
