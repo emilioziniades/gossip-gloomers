@@ -1,19 +1,19 @@
-test: test-echo test-unique-ids
+all: echo unique-ids broadcast-single broadcast-multi broadcast-fault-tolerant
 
 build:
     nix build .#default
 
-test-echo: build
-    nix run .#maelstrom -- test -w echo --bin ./result/bin/1-echo --node-count 1 --time-limit 10
+echo: build
+    nix run .#maelstrom -- test -w echo --bin ./result/bin/echo --node-count 1 --time-limit 10
 
-test-unique-ids: build
-    nix run .#maelstrom -- test -w unique-ids --bin ./result/bin/2-unique-ids --time-limit 30 --rate 1000 --node-count 3 --availability total --nemesis partition
+unique-ids: build
+    nix run .#maelstrom -- test -w unique-ids --bin ./result/bin/unique-ids --time-limit 30 --rate 1000 --node-count 3 --availability total --nemesis partition
 
-test-broadcast-single: build
-    nix run .#maelstrom -- test -w broadcast --bin ./result/bin/3-broadcast --node-count 1 --time-limit 20 --rate 10
+broadcast-single: build
+    nix run .#maelstrom -- test -w broadcast --bin ./result/bin/broadcast --node-count 1 --time-limit 20 --rate 10
 
-test-broadcast-multi: build
-    nix run .#maelstrom -- test -w broadcast --bin ./result/bin/3-broadcast --node-count 5 --time-limit 20 --rate 10
+broadcast-multi: build
+    nix run .#maelstrom -- test -w broadcast --bin ./result/bin/broadcast --node-count 5 --time-limit 20 --rate 10
     
-test-broadcast-fault-tolerant: build
-    nix run .#maelstrom -- test -w broadcast --bin ./result/bin/3-broadcast --node-count 5 --time-limit 20 --rate 10 --nemesis partition
+broadcast-fault-tolerant: build
+    nix run .#maelstrom -- test -w broadcast --bin ./result/bin/broadcast --node-count 5 --time-limit 20 --rate 10 --nemesis partition
