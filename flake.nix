@@ -57,5 +57,15 @@
         vendorHash = "sha256-v1bYSWwfIo6azkNM+DgxK5oKnZuDTe1k2wSCKk0vdos=";
       };
     });
+
+    devShells = forAllSystems (system: pkgs: {
+      default = pkgs.mkShell {
+        buildInputs = with pkgs; [
+          just
+          go
+          gotools
+        ];
+      };
+    });
   };
 }
