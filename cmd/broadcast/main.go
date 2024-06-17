@@ -27,46 +27,15 @@ type broadcastRequest struct {
 	Message int    `json:"message"`
 }
 
-type message struct {
-	destination string
-	number      int
-}
-
 func main() {
 	var (
 		messages     = make(map[int]struct{})
-		messagesLock = sync.Mutex{}
-
-		messagesToSend     = make(map[message]struct{})
-		messagesToSendLock = sync.Mutex{}
+		messagesLock = sync.RWMutex{}
 
 		neighbours = []string{}
 	)
 
 	n := maelstrom.NewNode()
-
-	// resend messages until success
-	go func() {
-		for {
-			messagesToSendLock.Lock()
-			for msgToSend := range messagesToSend {
-				n.RPC(msgToSend.destination,
-					broadcastRequest{
-						Type:    "broadcast",
-						Message: msgToSend.number,
-					},
-					func(msg maelstrom.Message) error {
-						messagesToSendLock.Lock()
-						delete(messagesToSend, msgToSend)
-						messagesToSendLock.Unlock()
-
-						return nil
-					})
-			}
-			messagesToSendLock.Unlock()
-			time.Sleep(time.Millisecond * 100)
-		}
-	}()
 
 	n.Handle("broadcast", func(msg maelstrom.Message) error {
 		var req broadcastRequest
@@ -74,25 +43,38 @@ func main() {
 			return err
 		}
 
-		messagesLock.Lock()
+		messagesLock.RLock()
 		_, exists := messages[req.Message]
-		messagesLock.Unlock()
+		messagesLock.RUnlock()
 
 		if !exists {
 			for _, neighbour := range neighbours {
 				if neighbour == msg.Src {
 					continue
 				}
-				messagesToSendLock.Lock()
-				messagesToSend[message{destination: neighbour, number: req.Message}] = struct{}{}
-				messagesToSendLock.Unlock()
-
+				go func(neighbour string) {
+					sent := false
+					for !sent {
+						n.RPC(neighbour,
+							broadcastRequest{
+								Type:    "broadcast",
+								Message: req.Message,
+							},
+							func(msg maelstrom.Message) error {
+								sent = true
+								return nil
+							})
+						time.Sleep(time.Millisecond * 100)
+					}
+				}(neighbour)
 			}
 		}
 
-		messagesLock.Lock()
-		messages[req.Message] = struct{}{}
-		messagesLock.Unlock()
+		go func() {
+			messagesLock.Lock()
+			messages[req.Message] = struct{}{}
+			messagesLock.Unlock()
+		}()
 
 		resp := response{
 			Type: "broadcast_ok",
@@ -104,11 +86,11 @@ func main() {
 	n.Handle("read", func(msg maelstrom.Message) error {
 		var msgs []int
 
-		messagesLock.Lock()
+		messagesLock.RLock()
 		for msg := range messages {
 			msgs = append(msgs, msg)
 		}
-		messagesLock.Unlock()
+		messagesLock.RUnlock()
 
 		resp := readResponse{
 			Type:     "read_ok",

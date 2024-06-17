@@ -64,6 +64,7 @@
           just
           go
           gotools
+          jet
         ];
       };
     });
