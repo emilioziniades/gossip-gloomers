@@ -64,7 +64,7 @@ func main() {
 								sent = true
 								return nil
 							})
-						time.Sleep(time.Millisecond * 100)
+						time.Sleep(time.Second)
 					}
 				}(neighbour)
 			}
