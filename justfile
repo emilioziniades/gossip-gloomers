@@ -19,7 +19,7 @@ broadcast-fault-tolerant: build
     nix run .#maelstrom -- test -w broadcast --bin ./result/bin/broadcast --node-count 5 --time-limit 20 --rate 10 --nemesis partition
 
 broadcast-performance: build
-    nix run .#maelstrom -- test -w broadcast --bin ./result/bin/broadcast --node-count 25 --time-limit 20 --rate 100 --latency 100
+    nix run .#maelstrom -- test -w broadcast --bin ./result/bin/broadcast --node-count 25 --time-limit 20 --rate 100 --latency 100 --topology tree4
 
     # Messages per operation
     cat store/latest/results.edn | jet -f '#(-> % :net :servers :msgs-per-op)'
