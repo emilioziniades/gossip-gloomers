@@ -8,7 +8,7 @@
         max-latency (-> data :workload :stable-latencies (get 1))]
     {:metrics {:messages-per-operation
                {:value msgs-per-op
-                :less-than-thirty (msgs-success msgs-per-op)}
+                :less-than-30 (msgs-success msgs-per-op)}
                :median-latency
                {:value median-latency
                 :less-than-400ms (mid-latency-success median-latency)}
