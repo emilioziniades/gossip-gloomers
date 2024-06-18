@@ -27,15 +27,49 @@ type broadcastRequest struct {
 	Message int    `json:"message"`
 }
 
+type broadcastBatchRequest struct {
+	Type    string `json:"type"`
+	Message []int  `json:"message"`
+}
+
 func main() {
 	var (
 		messages     = make(map[int]struct{})
 		messagesLock = sync.RWMutex{}
 
+		messagesChan = make(chan int, 100)
+
 		neighbours = []string{}
 	)
 
 	n := maelstrom.NewNode()
+
+	// Background goroutine that fetches some messages from a channel and batch
+	// sends them.
+	go func() {
+		for {
+			msgBatch := make([]int, 0)
+		L:
+			for {
+				select {
+				case msg := <-messagesChan:
+					msgBatch = append(msgBatch, msg)
+				default:
+					break L
+				}
+			}
+
+			for _, neighbour := range neighbours {
+				msg := broadcastBatchRequest{
+					Type:    "broadcast_batch",
+					Message: msgBatch,
+				}
+				go sendMessageWithRetry(n, neighbour, msg)
+			}
+
+			time.Sleep(time.Second)
+		}
+	}()
 
 	n.Handle("broadcast", func(msg maelstrom.Message) error {
 		var req broadcastRequest
@@ -48,39 +82,66 @@ func main() {
 		messagesLock.RUnlock()
 
 		if !exists {
-			for _, neighbour := range neighbours {
-				if neighbour == msg.Src {
-					continue
-				}
-				go func(neighbour string) {
-					sent := false
-					for !sent {
-						n.RPC(neighbour,
-							broadcastRequest{
-								Type:    "broadcast",
-								Message: req.Message,
-							},
-							func(msg maelstrom.Message) error {
-								sent = true
-								return nil
-							})
-						time.Sleep(time.Second)
-					}
-				}(neighbour)
-			}
+			go func() {
+				messagesChan <- req.Message
+			}()
 		}
 
-		go func() {
-			messagesLock.Lock()
-			messages[req.Message] = struct{}{}
-			messagesLock.Unlock()
-		}()
+		messagesLock.Lock()
+		messages[req.Message] = struct{}{}
+		messagesLock.Unlock()
 
 		resp := response{
 			Type: "broadcast_ok",
 		}
 
 		return n.Reply(msg, resp)
+	})
+
+	n.Handle("broadcast_batch", func(msg maelstrom.Message) error {
+		var req broadcastBatchRequest
+		if err := json.Unmarshal(msg.Body, &req); err != nil {
+			return err
+		}
+
+		messagesLock.RLock()
+		allExists := true
+		for _, message := range req.Message {
+			_, exists := messages[message]
+			if !exists {
+				allExists = false
+				break
+			}
+
+		}
+		messagesLock.RUnlock()
+
+		if !allExists {
+			for _, neighbour := range neighbours {
+				if neighbour == msg.Src {
+					continue
+				}
+				message := broadcastBatchRequest{
+					Type:    "broadcast_batch",
+					Message: req.Message,
+				}
+				go sendMessageWithRetry(n, neighbour, message)
+			}
+
+		}
+
+		messagesLock.Lock()
+		for _, message := range req.Message {
+			messages[message] = struct{}{}
+		}
+		messagesLock.Unlock()
+
+		resp := response{
+			Type: "broadcast_batch_ok",
+		}
+
+		return n.Reply(msg, resp)
+
 	})
 
 	n.Handle("read", func(msg maelstrom.Message) error {
@@ -118,4 +179,18 @@ func main() {
 	if err := n.Run(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func sendMessageWithRetry[T any](n *maelstrom.Node, dst string, message T) {
+	sent := false
+	for !sent {
+		n.RPC(dst,
+			message,
+			func(msg maelstrom.Message) error {
+				sent = true
+				return nil
+			})
+		time.Sleep(time.Second)
+	}
+
 }

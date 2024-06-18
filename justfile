@@ -27,3 +27,8 @@ broadcast-fault-tolerant: build
 broadcast-performance: build
     nix run .#maelstrom -- test -w broadcast --bin ./result/bin/3d-broadcast --node-count 25 --time-limit 20 --rate 100 --latency 100 --topology tree4
     cat store/latest/results.edn | jet -f queries/3d-broadcast.clj
+
+# 3e
+broadcast-performance-again: build
+    nix run .#maelstrom -- test -w broadcast --bin ./result/bin/3e-broadcast --node-count 25 --time-limit 20 --rate 100 --latency 100 --topology tree4
+    cat store/latest/results.edn | jet -f queries/3e-broadcast.clj
