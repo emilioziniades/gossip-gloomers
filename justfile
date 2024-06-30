@@ -32,3 +32,8 @@ broadcast-performance: build
 broadcast-performance-again: build
     nix run .#maelstrom -- test -w broadcast --bin ./result/bin/3e-broadcast --node-count 25 --time-limit 20 --rate 100 --latency 100 --topology tree4
     cat store/latest/results.edn | jet -f queries/3e-broadcast.clj
+
+# 4
+counter: build
+    # nix run .#maelstrom -- test -w g-counter --bin ./result/bin/4-counter --node-count 3 --rate 100 --time-limit 20 --nemesis partition
+    nix run .#maelstrom -- test -w g-counter --bin ./result/bin/4-counter --node-count 1 --rate 100 --time-limit 5 
