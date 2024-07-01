@@ -4,9 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"strings"
 	"sync"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
+)
+
+const (
+	primaryId  string = "n0"
+	counterKey string = "counter"
 )
 
 func main() {
@@ -18,23 +24,22 @@ func main() {
 	if err := s.n.Run(); err != nil {
 		log.Fatal(err)
 	}
-
 }
 
 type server struct {
-	n       *maelstrom.Node
-	kv      *maelstrom.KV
-	count   int
-	countMu *sync.Mutex
+	n   *maelstrom.Node
+	kv  *maelstrom.KV
+	c   int
+	cMu *sync.Mutex
 }
 
 func newServer() server {
 	n := maelstrom.NewNode()
 	return server{
-		n:       n,
-		kv:      maelstrom.NewSeqKV(n),
-		count:   0,
-		countMu: &sync.Mutex{},
+		n:   n,
+		kv:  maelstrom.NewSeqKV(n),
+		c:   0,
+		cMu: &sync.Mutex{},
 	}
 }
 
@@ -44,10 +49,22 @@ func (s *server) add(msg maelstrom.Message) error {
 		return err
 	}
 
-	s.countMu.Lock()
-	err := s.kv.CompareAndSwap(context.TODO(), "counter", s.count, s.count+body.Delta, true)
-	s.count += body.Delta
-	s.countMu.Unlock()
+	s.cMu.Lock()
+	err := s.kv.CompareAndSwap(context.Background(), counterKey, s.c, s.c+body.Delta, true)
+	s.c += body.Delta
+	s.cMu.Unlock()
+
+	// broadcast add to other nodes if message comes from client
+	if strings.HasPrefix(msg.Src, "c") {
+		for _, nId := range s.n.NodeIDs() {
+			if nId == s.n.ID() {
+				continue
+			}
+
+			s.n.RPC(nId, body, func(msg maelstrom.Message) error { return nil })
+		}
+
+	}
 
 	if err != nil {
 		rpcErr, ok := err.(*maelstrom.RPCError)
@@ -56,12 +73,7 @@ func (s *server) add(msg maelstrom.Message) error {
 			return err
 		}
 
-		if rpcErr.Code != maelstrom.KeyDoesNotExist {
-			log.Printf("KEY DOES NOT EXIST: %s", rpcErr.Text)
-		} else if rpcErr.Code == maelstrom.PreconditionFailed {
-			log.Printf("PRECONDITION FAILED: %s", rpcErr.Text)
-		} else {
-			log.Printf("OTHER: %s", rpcErr.Text)
+		if rpcErr.Code != maelstrom.KeyDoesNotExist && rpcErr.Code != maelstrom.PreconditionFailed {
 			return err
 		}
 
@@ -71,7 +83,7 @@ func (s *server) add(msg maelstrom.Message) error {
 }
 
 func (s *server) read(msg maelstrom.Message) error {
-	n, err := s.kv.ReadInt(context.TODO(), "counter")
+	n, err := s.kv.ReadInt(context.Background(), counterKey)
 
 	if err != nil {
 		return err
