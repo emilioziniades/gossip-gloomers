@@ -58,6 +58,8 @@ Just changing the topology was enough to satisfy the challenges performance requ
 - Median stable latency: 377ms
 - Maximum stable latency: 522ms
 
+In future, I could build my own spanning tree out of a fully connected graph of nodes.
+
 ## 3e: Efficient Broadcast, Part 2
 
 TODO: link to solution
@@ -83,3 +85,20 @@ So, I opted for batching messages together. A goroutine runs in a loop once a se
 - Messages per operation: 12.77
 - Median stable latency: 853ms
 - Maximum stable latency: 1411ms
+
+## 4: Grow-Only Counter
+
+TODO: link to solution
+
+The key to my solution was that each node kept a local counter, and only did compare-and-swaps against the global counter in the seq-kv store.
+
+When a node receives an add message, it broadcasts that add to all other nodes.
+To prevent a broadcast storm, adds are only broacast if the message comes from a client, and not another node.
+To avoid race conditions, I only mutate the counter in the key-value store with compare-and-swaps.
+The node keeps a local counter for compare-and-swaps.
+All nodes try perform the same compare-and-swaps. This is safe because writes will only occur if the node has an accurate view of the state of the global counter.
+These broadcasts are also retried until a response is received, in case messages fail during network partitions.
+
+This is enough to pass the challenge.
+Honestly, I'm still not fully clear on why this works.
+I think my lack of understanding of sequential consistency is preventing me from intuitively understanding the solution.
