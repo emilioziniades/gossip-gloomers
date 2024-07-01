@@ -6,6 +6,7 @@ import (
 	"log"
 	"strings"
 	"sync"
+	"time"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
 )
@@ -61,7 +62,19 @@ func (s *server) add(msg maelstrom.Message) error {
 				continue
 			}
 
-			s.n.RPC(nId, body, func(msg maelstrom.Message) error { return nil })
+			// retry in a separate goroutine
+			go func(nId string) {
+				sent := false
+				for !sent {
+					s.n.RPC(nId, body, func(msg maelstrom.Message) error {
+						sent = true
+						return nil
+					})
+					time.Sleep(2 * time.Second)
+				}
+
+			}(nId)
+
 		}
 
 	}

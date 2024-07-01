@@ -35,4 +35,4 @@ broadcast-performance-again: build
 
 # 4
 counter: build
-    nix run .#maelstrom -- test -w g-counter --bin ./result/bin/4-counter --node-count 3 --rate 100 --time-limit 20 #--nemesis partition
+    nix run .#maelstrom -- test -w g-counter --bin ./result/bin/4-counter --node-count 3 --rate 100 --time-limit 20 --nemesis partition
