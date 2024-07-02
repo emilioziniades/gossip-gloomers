@@ -37,5 +37,10 @@ broadcast-performance-again: build
 counter: build
     nix run .#maelstrom -- test -w g-counter --bin ./result/bin/4-counter --node-count 3 --rate 100 --time-limit 20 --nemesis partition
 
+# 5a
 kafka-single: build
     nix run .#maelstrom -- test -w kafka --bin ./result/bin/5a-kafka --node-count 1 --concurrency 2n --time-limit 20 --rate 1000
+
+# 5b
+kafka-multi: build
+    nix run .#maelstrom -- test -w kafka --bin ./result/bin/5a-kafka --node-count 2 --concurrency 2n --time-limit 20 --rate 1000
