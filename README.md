@@ -102,3 +102,18 @@ These broadcasts are also retried until a response is received, in case messages
 This is enough to pass the challenge.
 Honestly, I'm still not fully clear on why this works.
 I think my lack of understanding of sequential consistency is preventing me from intuitively understanding the solution.
+
+## 5: Single-Node Kafka Logs
+
+TODO: link to solution
+
+Since it's only one node, the challenge is pretty straightforward.
+Putting mutexes around all the core data structures is muscle memory at this point.
+
+I was quite pleased with the data structures I picked, and a lot of the code flowed after I got these correct.
+`server.log` was a `map[string][]int`.
+Each key was an entry in the map, and the arrays of integers were the messages.
+Offsets were defined as the message index in the array.
+This made offset-based lookups fast (O(1)) because it is just a slice index.
+Log appends were also fast.
+Those were just slice appends (also O(1)).
