@@ -103,7 +103,7 @@ This is enough to pass the challenge.
 Honestly, I'm still not fully clear on why this works.
 I think my lack of understanding of sequential consistency is preventing me from intuitively understanding the solution.
 
-## 5: Single-Node Kafka Logs
+## 5a: Single-Node Kafka Logs
 
 TODO: link to solution
 
