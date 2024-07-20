@@ -1,7 +1,7 @@
 all: echo unique-ids broadcast-single broadcast-multi broadcast-fault-tolerant broadcast-performance counter kafka-single kafka-multi
 
 maelstrom workflow binary arguments:
-    nix shell .# .#maelstrom --command bash -c 'BIN=$(command -v {{ binary }}); maelstrom test -w {{ workflow }} --bin $BIN {{ arguments }}'
+    nix develop -c bash -c 'BIN=$(command -v {{ binary }}); maelstrom test -w {{ workflow }} --bin $BIN {{ arguments }}'
 
 # 1
 echo:
