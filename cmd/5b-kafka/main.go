@@ -45,12 +45,13 @@ func newServer() server {
 }
 
 func (s *server) send(msg maelstrom.Message) error {
+	s.logMu.Lock()
+	defer s.logMu.Unlock()
+
 	var body sendRequest
 	if err := json.Unmarshal(msg.Body, &body); err != nil {
 		return err
 	}
-
-	s.logMu.Lock()
 
 	s.log[body.Key] = append(s.log[body.Key], body.Message)
 
@@ -65,8 +66,6 @@ func (s *server) send(msg maelstrom.Message) error {
 	if err := s.kv.CompareAndSwap(context.Background(), body.Key, oldLogs, newLogs, true); err != nil {
 		log.Println("ERROR send", body.Key, err)
 	}
-
-	s.logMu.Unlock()
 
 	// broadcast to other nodes if "send" comes from a client
 	// if strings.HasPrefix(msg.Src, "c") {
@@ -84,12 +83,13 @@ func (s *server) send(msg maelstrom.Message) error {
 }
 
 func (s *server) poll(msg maelstrom.Message) error {
+	s.logMu.Lock()
+	defer s.logMu.Unlock()
+
 	var body pollRequest
 	if err := json.Unmarshal(msg.Body, &body); err != nil {
 		return err
 	}
-
-	s.logMu.Lock()
 
 	polled := make(map[string][][]int)
 
@@ -113,18 +113,17 @@ func (s *server) poll(msg maelstrom.Message) error {
 		polled[key] = p
 	}
 
-	s.logMu.Unlock()
-
 	return s.n.Reply(msg, pollResponse{Type: "poll_ok", Messages: polled})
 }
 
 func (s *server) commitOffsets(msg maelstrom.Message) error {
+	s.committedMu.Lock()
+	defer s.committedMu.Unlock()
+
 	var body commitOffsetsRequest
 	if err := json.Unmarshal(msg.Body, &body); err != nil {
 		return err
 	}
-
-	s.committedMu.Lock()
 
 	for key, offset := range body.Offsets {
 		oldOffset := s.committed[key]
@@ -135,18 +134,17 @@ func (s *server) commitOffsets(msg maelstrom.Message) error {
 
 	}
 
-	s.committedMu.Unlock()
-
 	return s.n.Reply(msg, commitOffsetsResponse{Type: "commit_offsets_ok"})
 }
 
 func (s *server) listCommittedOffsets(msg maelstrom.Message) error {
+	s.committedMu.Lock()
+	defer s.committedMu.Unlock()
+
 	var body listCommittedOffsetsRequest
 	if err := json.Unmarshal(msg.Body, &body); err != nil {
 		return err
 	}
-
-	s.committedMu.Lock()
 
 	committed := make(map[string]int)
 	for _, key := range body.Keys {
@@ -156,8 +154,6 @@ func (s *server) listCommittedOffsets(msg maelstrom.Message) error {
 		}
 		committed[key] = offset
 	}
-
-	s.committedMu.Unlock()
 
 	return s.n.Reply(msg, listCommittedOffsetsResponse{Type: "list_committed_offsets_ok", Offsets: committed})
 }
