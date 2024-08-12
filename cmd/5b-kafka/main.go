@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"strings"
 	"sync"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
@@ -68,16 +69,18 @@ func (s *server) send(msg maelstrom.Message) error {
 	}
 
 	// broadcast to other nodes if "send" comes from a client
-	// if strings.HasPrefix(msg.Src, "c") {
-	// 	for _, n := range s.n.NodeIDs() {
-	// 		if n == s.n.ID() {
-	// 			continue
-	// 		}
-	// 		if err := s.n.RPC(n, body, func(msg maelstrom.Message) error { return nil }); err != nil {
-	// 			// return err
-	// 		}
-	// 	}
-	// }
+	if strings.HasPrefix(msg.Src, "c") {
+		for _, n := range s.n.NodeIDs() {
+			if n == s.n.ID() {
+				continue
+			}
+			log.Printf("TRACE broadcast from %s to %s", s.n.ID(), n)
+			if err := s.n.RPC(n, body, func(msg maelstrom.Message) error { return nil }); err != nil {
+				log.Println("ERROR send-broadcast", body.Key, err)
+				// return err
+			}
+		}
+	}
 
 	return s.n.Reply(msg, sendResponse{Type: "send_ok", Offset: offset})
 }
@@ -131,7 +134,6 @@ func (s *server) commitOffsets(msg maelstrom.Message) error {
 		if err := s.kv.CompareAndSwap(context.Background(), "committed-"+key, oldOffset, offset, true); err != nil {
 			log.Println("ERROR commitOffsets", "committed-"+key, err)
 		}
-
 	}
 
 	return s.n.Reply(msg, commitOffsetsResponse{Type: "commit_offsets_ok"})
