@@ -117,3 +117,37 @@ Offsets were defined as the message index in the array.
 This made offset-based lookups fast (O(1)) because it is just a slice index.
 Log appends were also fast.
 Those were just slice appends (also O(1)).
+
+## 5b: Multi-Node Kafka Logs
+
+TODO: link to solution
+
+This challenge is trickier than the previous one.
+
+After some experimenting, I've concluded that the key-value stores provided by maelstrom are global.
+If one node writes to a key, all other nodes can read from that key.
+This seems obvious in hindsight, but it wasn't so clear in challenge 4.
+
+The biggest difference between challenges 4 and 5 is the data structure we are persisting to the key-value store.
+
+In challenge 4, the data being persisted is a grow-only counter.
+The adds could occur in any order as long as they all occured, and this allowed a simple broadcast of all adds, and letting each node safely CAS the result.
+
+In challenge 5, the data being persisted is multiple arrays.
+This challenge is not so simple, because the array appends _must_ occur in the same order.
+This means broadcasting and free-for-all CASs does not work.
+
+Instead, I opted for a primary-secondary setup, where `n0` is always the primary, and all other nodes are secondaries.
+Only the primary writes to the key-value store.
+If a secondary receives a write operation (`send` or `commit_offsets`), it passes the write onto the primary and returns the response.
+For reads, secondaries read directly from the key-value store.
+
+Based on about 5 minutes reading time, it seems like the real Kafka has a similar architecture, with leaders and replicas.
+There are a lot (_a lot_) of complexities I don't have to deal with, such as replication, leader elections and sharding.
+All nodes (primary or secondary) read from the lin-kv store, so the primary does not have to replicate its data out.
+And because this system is really simple, the primary remains `n0` and I just don't bother with an election.
+
+Admittedly, network partitions would be troublesome, as all writes would fail if a node couldn't reach the primary.
+No progress could be made on writes until the network partitions are resolved.
+I am opting for consistency over availability (for writes) if there is a partition.
+Luckily, this challenge does not include network partitions.

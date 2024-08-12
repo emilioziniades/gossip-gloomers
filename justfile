@@ -43,4 +43,4 @@ kafka-single:
 
 # 5b
 kafka-multi:
-    just maelstrom kafka 5b-kafka '--node-count 1 --concurrency 2n --time-limit 20 --rate 1000'
+    just maelstrom kafka 5b-kafka '--node-count 2 --concurrency 2n --time-limit 20 --rate 1000'

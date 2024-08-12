@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"strings"
 	"sync"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
@@ -54,35 +53,32 @@ func (s *server) send(msg maelstrom.Message) error {
 		return err
 	}
 
-	s.log[body.Key] = append(s.log[body.Key], body.Message)
+	if s.isPrimary() {
+		// update local state and write to kv store
+		s.log[body.Key] = append(s.log[body.Key], body.Message)
 
-	logs := s.log[body.Key]
-	oldLogs := make([]int, len(logs)-1)
-	newLogs := make([]int, len(logs))
-	copy(oldLogs, logs)
-	copy(newLogs, logs)
+		logs := s.log[body.Key]
+		oldLogs := make([]int, len(logs)-1)
+		newLogs := make([]int, len(logs))
+		copy(oldLogs, logs)
+		copy(newLogs, logs)
 
-	offset := len(logs) - 1
+		offset := len(logs) - 1
 
-	if err := s.kv.CompareAndSwap(context.Background(), body.Key, oldLogs, newLogs, true); err != nil {
-		log.Println("ERROR send", body.Key, err)
-	}
-
-	// broadcast to other nodes if "send" comes from a client
-	if strings.HasPrefix(msg.Src, "c") {
-		for _, n := range s.n.NodeIDs() {
-			if n == s.n.ID() {
-				continue
-			}
-			log.Printf("TRACE broadcast from %s to %s", s.n.ID(), n)
-			if err := s.n.RPC(n, body, func(msg maelstrom.Message) error { return nil }); err != nil {
-				log.Println("ERROR send-broadcast", body.Key, err)
-				// return err
-			}
+		if err := s.kv.CompareAndSwap(context.Background(), body.Key, oldLogs, newLogs, true); err != nil {
+			log.Println("ERROR send", body.Key, err)
 		}
-	}
 
-	return s.n.Reply(msg, sendResponse{Type: "send_ok", Offset: offset})
+		return s.n.Reply(msg, sendResponse{Type: "send_ok", Offset: offset})
+	} else {
+		// ask primary to update kv store and return response
+		m, err := s.n.SyncRPC(context.TODO(), s.getPrimary(), body)
+		if err != nil {
+			log.Println("ERROR send-primary", err)
+		}
+
+		return s.n.Reply(msg, m.Body)
+	}
 }
 
 func (s *server) poll(msg maelstrom.Message) error {
@@ -128,12 +124,18 @@ func (s *server) commitOffsets(msg maelstrom.Message) error {
 		return err
 	}
 
-	for key, offset := range body.Offsets {
-		oldOffset := s.committed[key]
-		s.committed[key] = offset
-		if err := s.kv.CompareAndSwap(context.Background(), "committed-"+key, oldOffset, offset, true); err != nil {
-			log.Println("ERROR commitOffsets", "committed-"+key, err)
+	if s.isPrimary() {
+		// update local state and write to kv store
+		for key, offset := range body.Offsets {
+			oldOffset := s.committed[key]
+			s.committed[key] = offset
+			if err := s.kv.CompareAndSwap(context.Background(), "committed-"+key, oldOffset, offset, true); err != nil {
+				log.Println("ERROR commitOffsets", "committed-"+key, err)
+			}
 		}
+	} else {
+		// ask primary to update kv store and return response
+		s.n.SyncRPC(context.TODO(), s.getPrimary(), body)
 	}
 
 	return s.n.Reply(msg, commitOffsetsResponse{Type: "commit_offsets_ok"})
@@ -158,6 +160,15 @@ func (s *server) listCommittedOffsets(msg maelstrom.Message) error {
 	}
 
 	return s.n.Reply(msg, listCommittedOffsetsResponse{Type: "list_committed_offsets_ok", Offsets: committed})
+}
+
+// A simple way to establish a primary node. `n0` is always the primary.
+func (s *server) isPrimary() bool {
+	return s.n.ID() == "n0"
+}
+
+func (s *server) getPrimary() string {
+	return "n0"
 }
 
 type sendRequest struct {
