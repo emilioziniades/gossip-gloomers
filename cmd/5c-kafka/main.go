@@ -24,7 +24,8 @@ func main() {
 
 type server struct {
 	n           *maelstrom.Node
-	kv          *maelstrom.KV
+	linKV       *maelstrom.KV
+	seqKV       *maelstrom.KV
 	log         map[string][]int
 	logMu       *sync.Mutex
 	committed   map[string]int
@@ -33,10 +34,12 @@ type server struct {
 
 func newServer() server {
 	n := maelstrom.NewNode()
-	kv := maelstrom.NewLinKV(n)
+	linKV := maelstrom.NewLinKV(n)
+	seqKV := maelstrom.NewSeqKV(n)
 	return server{
 		n:           n,
-		kv:          kv,
+		linKV:       linKV,
+		seqKV:       seqKV,
 		log:         make(map[string][]int),
 		logMu:       &sync.Mutex{},
 		committed:   make(map[string]int),
@@ -65,7 +68,7 @@ func (s *server) send(msg maelstrom.Message) error {
 
 		offset := len(logs) - 1
 
-		if err := s.kv.CompareAndSwap(context.Background(), body.Key, oldLogs, newLogs, true); err != nil {
+		if err := s.linKV.CompareAndSwap(context.Background(), body.Key, oldLogs, newLogs, true); err != nil {
 			log.Println("ERROR send", body.Key, err)
 		}
 
@@ -94,7 +97,7 @@ func (s *server) poll(msg maelstrom.Message) error {
 
 	for key, offset := range body.Offsets {
 		messages := make([]int, 0)
-		if err := s.kv.ReadInto(context.Background(), key, &messages); err != nil {
+		if err := s.linKV.ReadInto(context.Background(), key, &messages); err != nil {
 			log.Println("ERROR poll", key, err)
 		}
 
@@ -129,7 +132,7 @@ func (s *server) commitOffsets(msg maelstrom.Message) error {
 		for key, offset := range body.Offsets {
 			oldOffset := s.committed[key]
 			s.committed[key] = offset
-			if err := s.kv.CompareAndSwap(context.Background(), "committed-"+key, oldOffset, offset, true); err != nil {
+			if err := s.seqKV.CompareAndSwap(context.Background(), "committed-"+key, oldOffset, offset, true); err != nil {
 				log.Println("ERROR commitOffsets", "committed-"+key, err)
 			}
 		}
@@ -152,7 +155,7 @@ func (s *server) listCommittedOffsets(msg maelstrom.Message) error {
 
 	committed := make(map[string]int)
 	for _, key := range body.Keys {
-		offset, err := s.kv.ReadInt(context.Background(), "committed-"+key)
+		offset, err := s.seqKV.ReadInt(context.Background(), "committed-"+key)
 		if err != nil && maelstrom.ErrorCode(err) != maelstrom.KeyDoesNotExist {
 			log.Println("ERROR listCommittedOffsets", "committed-"+key, err)
 		}
