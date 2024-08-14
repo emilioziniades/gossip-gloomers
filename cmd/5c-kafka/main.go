@@ -61,14 +61,10 @@ func (s *server) send(msg maelstrom.Message) error {
 		s.log[body.Key] = append(s.log[body.Key], body.Message)
 
 		logs := s.log[body.Key]
-		oldLogs := make([]int, len(logs)-1)
-		newLogs := make([]int, len(logs))
-		copy(oldLogs, logs)
-		copy(newLogs, logs)
-
+		oldLogs := logs[0 : len(logs)-1]
 		offset := len(logs) - 1
 
-		if err := s.linKV.CompareAndSwap(context.Background(), body.Key, oldLogs, newLogs, true); err != nil {
+		if err := s.linKV.CompareAndSwap(context.Background(), body.Key, oldLogs, logs, true); err != nil {
 			log.Println("ERROR send", body.Key, err)
 		}
 
