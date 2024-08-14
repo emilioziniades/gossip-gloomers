@@ -48,8 +48,6 @@ func newServer() server {
 }
 
 func (s *server) send(msg maelstrom.Message) error {
-	s.logMu.Lock()
-	defer s.logMu.Unlock()
 
 	var body sendRequest
 	if err := json.Unmarshal(msg.Body, &body); err != nil {
@@ -58,6 +56,8 @@ func (s *server) send(msg maelstrom.Message) error {
 
 	if s.isPrimary() {
 		// update local state and write to kv store
+		s.logMu.Lock()
+
 		s.log[body.Key] = append(s.log[body.Key], body.Message)
 
 		logs := s.log[body.Key]
@@ -67,6 +67,8 @@ func (s *server) send(msg maelstrom.Message) error {
 		if err := s.linKV.CompareAndSwap(context.Background(), body.Key, oldLogs, logs, true); err != nil {
 			log.Println("ERROR send", body.Key, err)
 		}
+
+		s.logMu.Unlock()
 
 		return s.n.Reply(msg, sendResponse{Type: "send_ok", Offset: offset})
 	} else {
@@ -81,8 +83,6 @@ func (s *server) send(msg maelstrom.Message) error {
 }
 
 func (s *server) poll(msg maelstrom.Message) error {
-	s.logMu.RLock()
-	defer s.logMu.RUnlock()
 
 	var body pollRequest
 	if err := json.Unmarshal(msg.Body, &body); err != nil {
@@ -90,6 +90,8 @@ func (s *server) poll(msg maelstrom.Message) error {
 	}
 
 	polled := make(map[string][][]int)
+
+	s.logMu.RLock()
 
 	for key, offset := range body.Offsets {
 		messages := make([]int, 0)
@@ -111,13 +113,12 @@ func (s *server) poll(msg maelstrom.Message) error {
 		polled[key] = p
 	}
 
+	s.logMu.RUnlock()
+
 	return s.n.Reply(msg, pollResponse{Type: "poll_ok", Messages: polled})
 }
 
 func (s *server) commitOffsets(msg maelstrom.Message) error {
-	s.committedMu.Lock()
-	defer s.committedMu.Unlock()
-
 	var body commitOffsetsRequest
 	if err := json.Unmarshal(msg.Body, &body); err != nil {
 		return err
@@ -125,6 +126,8 @@ func (s *server) commitOffsets(msg maelstrom.Message) error {
 
 	if s.isPrimary() {
 		// update local state and write to kv store
+		s.committedMu.Lock()
+
 		for key, offset := range body.Offsets {
 			oldOffset := s.committed[key]
 			s.committed[key] = offset
@@ -132,6 +135,8 @@ func (s *server) commitOffsets(msg maelstrom.Message) error {
 				log.Println("ERROR commitOffsets", "committed-"+key, err)
 			}
 		}
+
+		s.committedMu.Unlock()
 	} else {
 		// ask primary to update kv store and return response
 		s.n.SyncRPC(context.TODO(), s.getPrimary(), body)
@@ -141,8 +146,6 @@ func (s *server) commitOffsets(msg maelstrom.Message) error {
 }
 
 func (s *server) listCommittedOffsets(msg maelstrom.Message) error {
-	s.committedMu.RLock()
-	defer s.committedMu.RUnlock()
 
 	var body listCommittedOffsetsRequest
 	if err := json.Unmarshal(msg.Body, &body); err != nil {
@@ -150,6 +153,9 @@ func (s *server) listCommittedOffsets(msg maelstrom.Message) error {
 	}
 
 	committed := make(map[string]int)
+
+	s.committedMu.RLock()
+
 	for _, key := range body.Keys {
 		offset, err := s.seqKV.ReadInt(context.Background(), "committed-"+key)
 		if err != nil && maelstrom.ErrorCode(err) != maelstrom.KeyDoesNotExist {
@@ -157,6 +163,8 @@ func (s *server) listCommittedOffsets(msg maelstrom.Message) error {
 		}
 		committed[key] = offset
 	}
+
+	s.committedMu.RUnlock()
 
 	return s.n.Reply(msg, listCommittedOffsetsResponse{Type: "list_committed_offsets_ok", Offsets: committed})
 }
