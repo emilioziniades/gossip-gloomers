@@ -27,9 +27,9 @@ type server struct {
 	linKV       *maelstrom.KV
 	seqKV       *maelstrom.KV
 	log         map[string][]int
-	logMu       *sync.Mutex
+	logMu       *sync.RWMutex
 	committed   map[string]int
-	committedMu *sync.Mutex
+	committedMu *sync.RWMutex
 }
 
 func newServer() server {
@@ -41,9 +41,9 @@ func newServer() server {
 		linKV:       linKV,
 		seqKV:       seqKV,
 		log:         make(map[string][]int),
-		logMu:       &sync.Mutex{},
+		logMu:       &sync.RWMutex{},
 		committed:   make(map[string]int),
-		committedMu: &sync.Mutex{},
+		committedMu: &sync.RWMutex{},
 	}
 }
 
@@ -81,8 +81,8 @@ func (s *server) send(msg maelstrom.Message) error {
 }
 
 func (s *server) poll(msg maelstrom.Message) error {
-	s.logMu.Lock()
-	defer s.logMu.Unlock()
+	s.logMu.RLock()
+	defer s.logMu.RUnlock()
 
 	var body pollRequest
 	if err := json.Unmarshal(msg.Body, &body); err != nil {
@@ -141,8 +141,8 @@ func (s *server) commitOffsets(msg maelstrom.Message) error {
 }
 
 func (s *server) listCommittedOffsets(msg maelstrom.Message) error {
-	s.committedMu.Lock()
-	defer s.committedMu.Unlock()
+	s.committedMu.RLock()
+	defer s.committedMu.RUnlock()
 
 	var body listCommittedOffsetsRequest
 	if err := json.Unmarshal(msg.Body, &body); err != nil {
