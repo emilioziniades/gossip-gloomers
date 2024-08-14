@@ -4,7 +4,7 @@ My solutions to [Gossip Gloomers](https://fly.io/dist-sys/)- the Fly.io distribu
 
 TODO: summary of challenge (uses maelstrom etc)
 TODO: Note about setup using nix
-TODO: link to article on my blog
+TODO: link to article on my blog about using nix to make this easier.
 
 # 2: Unique ID Generation
 
@@ -151,3 +151,23 @@ Admittedly, network partitions would be troublesome, as all writes would fail if
 No progress could be made on writes until the network partitions are resolved.
 I am opting for consistency over availability (for writes) if there is a partition.
 Luckily, this challenge does not include network partitions.
+
+## 5c: Optimized Multi-Node Kafka Logs
+
+TODO: link to solution
+
+After getting baseline measurements, I made a few optimizations but was not able to improve performance significantly.
+Neither latency nor messages per operation were improved by my optimizations.
+
+First, I switched to seq-kv for the committed offsets.
+Sequential consistency is acceptable for this data because we do not require real-time constraints.
+
+Then, I also optimized the Go code handling the in-memory cache of the data.
+I avoided unnecessary slice copies, and ensured that the mutexes wrap the necessary code instead of the whole function.
+
+Algorithmically, the messages per operation and latency are constant with regards to the number of nodes.
+All secondaries communicate directly with the primary, so there isn not an explosion in messages as we add more nodes.
+
+The downside of my overall approach for challenge 5 is that it does not handle network partitions.
+If the primary is unavailable, no writes can occur.
+Plus, I don't have a mechanism for re-electing the primary.
