@@ -52,3 +52,7 @@ kafka-multi-optimized:
 # 6a
 transactions-single:
     just maelstrom txn-rw-register 6a-transactions '--node-count 1 --time-limit 20 --rate 1000 --concurrency 2n --consistency-models read-uncommitted --availability total'
+
+# 6b
+transactions-multi:
+    just maelstrom txn-rw-register 6b-transactions '--node-count 2 --time-limit 20 --rate 1000 --concurrency 2n --consistency-models read-uncommitted --availability total --nemesis partition'
