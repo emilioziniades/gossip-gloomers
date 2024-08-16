@@ -56,3 +56,7 @@ transactions-single:
 # 6b
 transactions-multi:
     just maelstrom txn-rw-register 6b-transactions '--node-count 2 --time-limit 20 --rate 1000 --concurrency 2n --consistency-models read-uncommitted --availability total --nemesis partition'
+
+# 6c
+transactions-multi-read-committed:
+    just maelstrom txn-rw-register 6c-transactions '--node-count 2 --time-limit 20 --rate 1000 --concurrency 2n --consistency-models read-committed --availability total --nemesis partition'
