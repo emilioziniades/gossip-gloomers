@@ -181,6 +181,15 @@ Keys and values are stored in a `map[int]*int` and the map is wrapped with a mut
 The mutex is locked for the entire duration of the transaction, so that concurrent writes do not interfere with one another.
 
 The hardest part of this challenge was implementing the custom serialization/deserialization methods for the transactions array.
-`["w", 1, 2]` is compact but hard to handle in the code.
-Instead, I serialized and deserialized to a struct with fields `operation`, `key` and `value`.
+`["w", 1, 2]` is compact over the wire, but hard to handle in the code.
+Instead, I serialized and deserialized this to a struct with fields `operation`, `key` and `value`.
 I have not done this before in Go but it was not as difficult as expected.
+
+## 6b: Totally-Available, Read Uncommitted Transactions
+
+TODO: link to solution
+
+The challenge references a [Github issue](https://github.com/jepsen-io/maelstrom/issues/56) related to Maelstrom's ability to verify read-uncommitted transactions.
+I was able to verify this.
+Simply copy-pasting the code from 6a was enough for my system to pass Maelstrom's validity checks.
+In any case, I replicated transactions to other nodes anyways, with retries in case of partitions.

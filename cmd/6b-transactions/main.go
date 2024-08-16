@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
+	"time"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
 )
@@ -60,6 +62,29 @@ func (s *server) txn(msg maelstrom.Message) error {
 	}
 
 	s.dataMu.Unlock()
+
+	// replicate to other nodes if transaction comes from a client
+	if strings.HasPrefix(msg.Src, "c") {
+		for _, nId := range s.n.NodeIDs() {
+			// do not send to self
+			if s.n.ID() == nId {
+				continue
+			}
+
+			// retry in a separate goroutine
+			go func(nId string) {
+				sent := false
+				for !sent {
+					s.n.RPC(nId, body, func(msg maelstrom.Message) error {
+						sent = true
+						return nil
+					})
+					time.Sleep(2 * time.Second)
+				}
+
+			}(nId)
+		}
+	}
 
 	return s.n.Reply(msg, txnResponse{Type: "txn_ok", Transactions: txns})
 }
