@@ -6,31 +6,31 @@ import (
 	"fmt"
 )
 
-type operation string
+type operationType string
 
 const (
-	read  operation = "r"
-	write operation = "w"
+	read  operationType = "r"
+	write operationType = "w"
 )
 
 type txnRequest struct {
-	Type         string        `json:"type"`
-	Transactions []transaction `json:"txn"`
+	Type        string      `json:"type"`
+	Transaction []operation `json:"txn"`
 }
 
 type txnResponse struct {
-	Type         string        `json:"type"`
-	Transactions []transaction `json:"txn"`
+	Type        string      `json:"type"`
+	Transaction []operation `json:"txn"`
 }
 
-type transaction struct {
-	operation operation
-	key       int
-	value     *int
+type operation struct {
+	operationType operationType
+	key           int
+	value         *int
 }
 
-// unmarshal array of the form ['r', 1, nil] into a transaction struct
-func (t *transaction) UnmarshalJSON(p []byte) error {
+// unmarshal array of the form ['r', 1, nil] into an operation struct
+func (o *operation) UnmarshalJSON(p []byte) error {
 	tmp := []interface{}{}
 	if err := json.Unmarshal(p, &tmp); err != nil {
 		return err
@@ -56,17 +56,17 @@ func (t *transaction) UnmarshalJSON(p []byte) error {
 		return errors.New(fmt.Sprintf("could not deserialize as a nullable number: %v", tmp[2]))
 	}
 
-	t.operation = operation(op)
-	t.key = int(key)
-	t.value = value
+	o.operationType = operationType(op)
+	o.key = int(key)
+	o.value = value
 
 	return nil
 }
 
 // marshal transaction struct into an array of the form ['r', 1, nil]
-func (t *transaction) MarshalJSON() ([]byte, error) {
+func (o *operation) MarshalJSON() ([]byte, error) {
 	tmp := []interface{}{}
-	tmp = append(tmp, t.operation, t.key, t.value)
+	tmp = append(tmp, o.operationType, o.key, o.value)
 
 	raw, err := json.Marshal(tmp)
 	if err != nil {

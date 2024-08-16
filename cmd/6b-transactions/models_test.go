@@ -27,25 +27,25 @@ func TestDeserialize(t *testing.T) {
 		t.Errorf("expected txt, got %v", body.Type)
 	}
 
-	expectedTxns := []transaction{
-		{operation: "r", key: 1, value: nil},
-		{operation: "r", key: 2, value: intptr(42)},
-		{operation: "w", key: 1, value: intptr(6)},
-		{operation: "w", key: 2, value: intptr(9)},
+	expectedTxn := []operation{
+		{operationType: "r", key: 1, value: nil},
+		{operationType: "r", key: 2, value: intptr(42)},
+		{operationType: "w", key: 1, value: intptr(6)},
+		{operationType: "w", key: 2, value: intptr(9)},
 	}
 
-	if !reflect.DeepEqual(body.Transactions, expectedTxns) {
-		t.Errorf("expected %v, got %v", expectedTxns, body.Transactions)
+	if !reflect.DeepEqual(body.Transaction, expectedTxn) {
+		t.Errorf("expected %v, got %v", expectedTxn, body.Transaction)
 	}
 }
 
 func TestSerialize(t *testing.T) {
 	msg := txnResponse{
 		Type: "txn_ok",
-		Transactions: []transaction{
-			{operation: "r", key: 1, value: intptr(3)},
-			{operation: "w", key: 1, value: intptr(6)},
-			{operation: "w", key: 2, value: intptr(9)},
+		Transaction: []operation{
+			{operationType: "r", key: 1, value: intptr(3)},
+			{operationType: "w", key: 1, value: intptr(6)},
+			{operationType: "w", key: 2, value: intptr(9)},
 		},
 	}
 

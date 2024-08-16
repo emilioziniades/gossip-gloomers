@@ -41,25 +41,25 @@ func (s *server) txn(msg maelstrom.Message) error {
 		return err
 	}
 
-	txns := make([]transaction, 0)
+	txn := make([]operation, 0)
 
 	s.dataMu.Lock()
 
-	for _, txn := range body.Transactions {
-		switch txn.operation {
+	for _, op := range body.Transaction {
+		switch op.operationType {
 		case read:
-			v := s.data[txn.key]
-			txn.value = v
+			v := s.data[op.key]
+			op.value = v
 		case write:
-			s.data[txn.key] = txn.value
+			s.data[op.key] = op.value
 		default:
-			return errors.New(fmt.Sprintf("Unrecognized operation: %v", txn.operation))
+			return errors.New(fmt.Sprintf("Unrecognized operation: %v", op.operationType))
 		}
 
-		txns = append(txns, txn)
+		txn = append(txn, op)
 	}
 
 	s.dataMu.Unlock()
 
-	return s.n.Reply(msg, txnResponse{Type: "txn_ok", Transactions: txns})
+	return s.n.Reply(msg, txnResponse{Type: "txn_ok", Transaction: txn})
 }
