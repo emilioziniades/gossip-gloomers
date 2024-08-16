@@ -48,3 +48,7 @@ kafka-multi:
 # 5c
 kafka-multi-optimized:
     just maelstrom kafka 5c-kafka '--node-count 2 --concurrency 2n --time-limit 20 --rate 1000'
+
+# 6a
+transactions-single:
+    just maelstrom txn-rw-register 6a-transactions '--node-count 1 --time-limit 20 --rate 1000 --concurrency 2n --consistency-models read-uncommitted --availability total'

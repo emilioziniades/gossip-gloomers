@@ -171,3 +171,16 @@ All secondaries communicate directly with the primary, so there isn not an explo
 The downside of my overall approach for challenge 5 is that it does not handle network partitions.
 If the primary is unavailable, no writes can occur.
 Plus, I don't have a mechanism for re-electing the primary.
+
+## 6a: Single-Node, Totally-Available Transactions
+
+TODO: link to solution
+
+Reasonably straightforward challenge.
+Keys and values are stored in a `map[int]*int` and the map is wrapped with a mutex.
+The mutex is locked for the entire duration of the transaction, so that concurrent writes do not interfere with one another.
+
+The hardest part of this challenge was implementing the custom serialization/deserialization methods for the transactions array.
+`["w", 1, 2]` is compact but hard to handle in the code.
+Instead, I serialized and deserialized to a struct with fields `operation`, `key` and `value`.
+I have not done this before in Go but it was not as difficult as expected.
