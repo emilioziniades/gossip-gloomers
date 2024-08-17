@@ -50,7 +50,6 @@ func TestSerialize(t *testing.T) {
 	}
 
 	rawMsg, err := json.Marshal(msg)
-
 	if err != nil {
 		t.Errorf("could not marshal json: %v", err)
 	}

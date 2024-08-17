@@ -72,11 +72,9 @@ func (s *server) add(msg maelstrom.Message) error {
 					})
 					time.Sleep(2 * time.Second)
 				}
-
 			}(nId)
 
 		}
-
 	}
 
 	if err != nil {
@@ -97,7 +95,6 @@ func (s *server) add(msg maelstrom.Message) error {
 
 func (s *server) read(msg maelstrom.Message) error {
 	n, err := s.kv.ReadInt(context.Background(), counterKey)
-
 	if err != nil {
 		return err
 	}

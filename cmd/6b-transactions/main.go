@@ -81,7 +81,6 @@ func (s *server) txn(msg maelstrom.Message) error {
 					})
 					time.Sleep(2 * time.Second)
 				}
-
 			}(nId)
 		}
 	}

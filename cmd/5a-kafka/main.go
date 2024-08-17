@@ -103,7 +103,6 @@ func (s *server) listCommittedOffsets(msg maelstrom.Message) error {
 }
 
 func poll(data map[string][]int, offsets map[string]int) map[string][][]int {
-
 	polled := make(map[string][][]int)
 
 	for key, offset := range offsets {

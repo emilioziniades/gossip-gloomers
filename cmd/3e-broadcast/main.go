@@ -127,7 +127,6 @@ func main() {
 				}
 				go sendMessageWithRetry(n, neighbour, message)
 			}
-
 		}
 
 		messagesLock.Lock()
@@ -141,7 +140,6 @@ func main() {
 		}
 
 		return n.Reply(msg, resp)
-
 	})
 
 	n.Handle("read", func(msg maelstrom.Message) error {
@@ -192,5 +190,4 @@ func sendMessageWithRetry[T any](n *maelstrom.Node, dst string, message T) {
 			})
 		time.Sleep(time.Second)
 	}
-
 }

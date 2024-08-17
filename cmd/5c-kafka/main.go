@@ -48,7 +48,6 @@ func newServer() server {
 }
 
 func (s *server) send(msg maelstrom.Message) error {
-
 	var body sendRequest
 	if err := json.Unmarshal(msg.Body, &body); err != nil {
 		return err
@@ -83,7 +82,6 @@ func (s *server) send(msg maelstrom.Message) error {
 }
 
 func (s *server) poll(msg maelstrom.Message) error {
-
 	var body pollRequest
 	if err := json.Unmarshal(msg.Body, &body); err != nil {
 		return err
@@ -146,7 +144,6 @@ func (s *server) commitOffsets(msg maelstrom.Message) error {
 }
 
 func (s *server) listCommittedOffsets(msg maelstrom.Message) error {
-
 	var body listCommittedOffsetsRequest
 	if err := json.Unmarshal(msg.Body, &body); err != nil {
 		return err
