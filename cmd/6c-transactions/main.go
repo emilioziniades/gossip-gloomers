@@ -5,12 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"strings"
 	"sync"
 	"time"
 
 	maelstrom "github.com/jepsen-io/maelstrom/demo/go"
 )
+
+// used to test G1a, but aborted transactions negatively affect the availability percentage that
+// maelstrom calculates and causes the test to fail. So I've made this toggleable.
+const abortTransactionsEnabled bool = false
 
 func main() {
 	s := newServer()
@@ -38,6 +43,9 @@ func newServer() server {
 }
 
 func (s *server) txn(msg maelstrom.Message) error {
+	s.dataMu.Lock()
+	defer s.dataMu.Unlock()
+
 	var body txnRequest
 	if err := json.Unmarshal(msg.Body, &body); err != nil {
 		return err
@@ -45,13 +53,16 @@ func (s *server) txn(msg maelstrom.Message) error {
 
 	txn := make([]operation, 0)
 
-	s.dataMu.Lock()
+	// take snapshot of relevant keys before processing transaction
+	snapshot := make(map[int]*int)
+	for _, op := range body.Transaction {
+		snapshot[op.key] = s.data[op.key]
+	}
 
 	for _, op := range body.Transaction {
 		switch op.operationType {
 		case read:
-			v := s.data[op.key]
-			op.value = v
+			op.value = s.data[op.key]
 		case write:
 			s.data[op.key] = op.value
 		default:
@@ -61,10 +72,24 @@ func (s *server) txn(msg maelstrom.Message) error {
 		txn = append(txn, op)
 	}
 
-	s.dataMu.Unlock()
+	// randomly abort transactions from client messages
+	if isClientMsg(msg) && abortTransactionsEnabled && shouldAbort() {
+		// restore data from snapshot
+		for k, v := range snapshot {
+			s.data[k] = v
+		}
+
+		return s.n.Reply(msg,
+			map[string]any{
+				"type": "error",
+				"code": maelstrom.TxnConflict,
+				"text": "txn abort",
+			})
+
+	}
 
 	// replicate to other nodes if transaction comes from a client
-	if strings.HasPrefix(msg.Src, "c") {
+	if isClientMsg(msg) {
 		for _, nId := range s.n.NodeIDs() {
 			// do not send to self
 			if s.n.ID() == nId {
@@ -87,4 +112,14 @@ func (s *server) txn(msg maelstrom.Message) error {
 	}
 
 	return s.n.Reply(msg, txnResponse{Type: "txn_ok", Transaction: txn})
+}
+
+// returns true approximately 1% of the time
+func shouldAbort() bool {
+	n := rand.Intn(100)
+	return n == 0
+}
+
+func isClientMsg(msg maelstrom.Message) bool {
+	return strings.HasPrefix(msg.Src, "c")
 }

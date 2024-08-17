@@ -193,3 +193,12 @@ The challenge references a [Github issue](https://github.com/jepsen-io/maelstrom
 I was able to verify this.
 Simply copy-pasting the code from 6a was enough for my system to pass Maelstrom's validity checks.
 In any case, I replicated transactions to other nodes anyways, with retries in case of partitions.
+
+## 6c: Totally-Available, Read Committed Transactions
+
+TODO: link to solution
+
+The same code from 5b was enough to pass the challenge, as I had already implemented replication and retries.
+
+In order to test the aborted transactions, I randomly aborted 1% of all transactions and implemented rollbacks.
+This negatively impacted maelstrom's availability percentage calculation, so I made the aborted transactions toggleable.
