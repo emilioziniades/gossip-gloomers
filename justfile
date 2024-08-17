@@ -1,4 +1,4 @@
-all: echo unique-ids broadcast-single broadcast-multi broadcast-fault-tolerant broadcast-performance counter kafka-single kafka-multi
+all: echo unique-ids broadcast-single broadcast-multi broadcast-fault-tolerant broadcast-performance broadcast-performance-again counter kafka-single kafka-multi kafka-multi-optimized transactions-single transactions-multi transactions-multi-read-committed
 
 maelstrom workflow binary arguments:
     nix develop -c bash -c 'BIN=$(command -v {{ binary }}); maelstrom test -w {{ workflow }} --bin $BIN {{ arguments }}'
