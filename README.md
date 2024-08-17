@@ -198,7 +198,8 @@ In any case, I replicated transactions to other nodes anyways, with retries in c
 
 TODO: link to solution
 
-The same code from 5b was enough to pass the challenge, as I had already implemented replication and retries.
+The same code from 6b was enough to pass the challenge, as I had already implemented replication and retries.
 
 In order to test the aborted transactions, I randomly aborted 1% of all transactions and implemented rollbacks.
-This negatively impacted maelstrom's availability percentage calculation, so I made the aborted transactions toggleable.
+This negatively impacted maelstrom's availability percentage calculation, and caused the test to fail.
+So I made the aborted transactions toggleable.
