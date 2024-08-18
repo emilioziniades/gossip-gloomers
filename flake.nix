@@ -1,5 +1,5 @@
 {
-  description = "Flake for the fly.io distributed systems challenge";
+  description = "Flake for Gossip Gloomers, the Fly.io distributed systems challenge";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
@@ -15,7 +15,7 @@
       pkgs = nixpkgs.legacyPackages.${system};
     in {
       packages.default = pkgs.buildGoModule {
-        pname = "fly-io-dist-sys";
+        pname = "gossip-gloomers";
         version = "0.0.1";
         src = ./.;
         vendorHash = "sha256-v1bYSWwfIo6azkNM+DgxK5oKnZuDTe1k2wSCKk0vdos=";
