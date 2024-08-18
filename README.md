@@ -2,13 +2,28 @@
 
 My solutions to [Gossip Gloomers](https://fly.io/dist-sys/)- the Fly.io distributed systems challenges.
 
-TODO: summary of challenge (uses maelstrom etc)
-TODO: Note about setup using nix
-TODO: link to article on my blog about using nix to make this easier.
+Gossip Gloomers is a series of distributed systems challenges.
+Each challenge requires you to write a node implementation.
+Multiple instances of a node will run during the course of a challenge.
+Clients communicate with nodes (and nodes communicate with each other) via standard input and output.
+[`maelstrom`](https://github.com/jepsen-io/maelstrom) runs the nodes, sending client messages and verifying that the nodes have the correct behaviour.
+
+I use a combination of Nix and Just to run tests.
+Nix is used to build to go binaries and install maelstrom.
+Just is used to invoke tests with the required arguments.
+`just all` runs all the tests.
+
+<!-- TODO: replace below with actual link when it's done -->
+
+I wrote a blog post [here](https://example.com) detailing how Nix and Just made my life easier when doing these challenges.
+
+# 1: Echo
+
+[Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/1-echo/main.go)
 
 # 2: Unique ID Generation
 
-TODO: link to solution
+[Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/2-unique-ids/main.go)
 
 To generate globally unique IDs, I concatenate the node ID and a monotonically increasing counter together.
 
@@ -16,11 +31,11 @@ To generate globally unique IDs, I concatenate the node ID and a monotonically i
 
 ## 3a: Single-Node Broadcast
 
-TODO: link to solution
+[Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/3a-broadcast/main.go)
 
 ## 3b: Multi-Node Broadcast
 
-TODO: link to solution
+[Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/3b-broadcast/main.go)
 
 Code is the same as for 3a.
 Nothing particularly interesting.
@@ -29,7 +44,7 @@ I ended up using the default grid topology provided by maelstrom.
 
 ## 3c: Fault Tolerant Broadcast
 
-TODO: link to solution
+[Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/3c-broadcast/main.go)
 
 Now that network calls can fail, I built a retry mechanism into the node.
 In a separate goroutine, a message is resent every second until the destination node acknowledges the broadcast.
@@ -39,7 +54,7 @@ After reworking it, the handler just fires off a goroutine, and that goroutine i
 
 ## 3d: Efficient Broadcast, Part 1
 
-TODO: link to solution
+[Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/3d-broadcast/main.go)
 
 The code is exactly the same as 3c.
 The only difference is the network topology.
@@ -62,7 +77,7 @@ In future, I could build my own spanning tree out of a fully connected graph of 
 
 ## 3e: Efficient Broadcast, Part 2
 
-TODO: link to solution
+[Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/3e-broadcast/main.go)
 
 This challenge relaxes the requirement on latency, and makes the messages per operation stricter.
 
@@ -88,7 +103,7 @@ So, I opted for batching messages together. A goroutine runs in a loop once a se
 
 ## 4: Grow-Only Counter
 
-TODO: link to solution
+[Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/4-counter/main.go)
 
 The key to my solution was that each node kept a local counter, and only did compare-and-swaps against the global counter in the seq-kv store.
 
@@ -105,7 +120,7 @@ I think my lack of understanding of sequential consistency is preventing me from
 
 ## 5a: Single-Node Kafka Logs
 
-TODO: link to solution
+[Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/5a-kafka/main.go)
 
 Since it's only one node, the challenge is pretty straightforward.
 Putting mutexes around all the core data structures is muscle memory at this point.
@@ -120,7 +135,7 @@ Those were just slice appends (also O(1)).
 
 ## 5b: Multi-Node Kafka Logs
 
-TODO: link to solution
+[Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/5b-kafka/main.go)
 
 This challenge is trickier than the previous one.
 
@@ -154,7 +169,7 @@ Luckily, this challenge does not include network partitions.
 
 ## 5c: Optimized Multi-Node Kafka Logs
 
-TODO: link to solution
+[Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/5c-kafka/main.go)
 
 After getting baseline measurements, I made a few optimizations but was not able to improve performance significantly.
 Neither latency nor messages per operation were improved by my optimizations.
@@ -174,7 +189,7 @@ Plus, I don't have a mechanism for re-electing the primary.
 
 ## 6a: Single-Node, Totally-Available Transactions
 
-TODO: link to solution
+[Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/6a-transactions)
 
 Reasonably straightforward challenge.
 Keys and values are stored in a `map[int]*int` and the map is wrapped with a mutex.
@@ -187,7 +202,7 @@ I have not done this before in Go but it was not as difficult as expected.
 
 ## 6b: Totally-Available, Read Uncommitted Transactions
 
-TODO: link to solution
+[Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/6b-transactions)
 
 The challenge references a [Github issue](https://github.com/jepsen-io/maelstrom/issues/56) related to Maelstrom's ability to verify read-uncommitted transactions.
 I was able to verify this.
@@ -196,7 +211,7 @@ In any case, I replicated transactions to other nodes anyways, with retries in c
 
 ## 6c: Totally-Available, Read Committed Transactions
 
-TODO: link to solution
+[Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/6b-transactions)
 
 The same code from 6b was enough to pass the challenge, as I had already implemented replication and retries.
 
