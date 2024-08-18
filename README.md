@@ -1,6 +1,6 @@
-# Gossip Gloomers Puzzles
+# Gossip Gloomers Solutions
 
-My solutions to [Gossip Gloomers](https://fly.io/dist-sys/)- the Fly.io distributed systems challenges.
+My solutions to [Gossip Gloomers](https://fly.io/dist-sys/) - the Fly.io distributed systems challenges.
 
 Gossip Gloomers is a series of distributed systems challenges.
 Each challenge requires you to write a node implementation.
@@ -9,7 +9,7 @@ Clients communicate with nodes (and nodes communicate with each other) via stand
 [`maelstrom`](https://github.com/jepsen-io/maelstrom) runs the nodes, sending client messages and verifying that the nodes have the correct behaviour.
 
 I use a combination of Nix and Just to run tests.
-Nix is used to build to go binaries and install maelstrom.
+Nix is used to build to Go binaries and install maelstrom.
 Just is used to invoke tests with the required arguments.
 `just all` runs all the tests.
 
@@ -82,6 +82,7 @@ In future, I could build my own spanning tree out of a fully connected graph of 
 This challenge relaxes the requirement on latency, and makes the messages per operation stricter.
 
 \<digression>
+
 After doing this challenge, it is clear that there is a tradeoff between latency and message rate.
 
 In a fully connected (total) topology, latency is very low because each node is connected to every other node.
@@ -90,6 +91,7 @@ However, a lot of duplicate messages will be sent.
 On the other hand, in a line topology, where each node is connected to only two other nodes, there will be no duplicate messages.
 This is also true in minimum spanning trees.
 But, the latency is high in a line topology because the distance between nodes may be large.
+
 \</digression>
 
 In any case, the challenge asks for a maximum of 20 messages per operation.
@@ -117,6 +119,8 @@ These broadcasts are also retried until a response is received, in case messages
 This is enough to pass the challenge.
 Honestly, I'm still not fully clear on why this works.
 I think my lack of understanding of sequential consistency is preventing me from intuitively understanding the solution.
+
+# Kafka-Style Logs
 
 ## 5a: Single-Node Kafka Logs
 
@@ -187,6 +191,8 @@ The downside of my overall approach for challenge 5 is that it does not handle n
 If the primary is unavailable, no writes can occur.
 Plus, I don't have a mechanism for re-electing the primary.
 
+# Totally-Available Transactions
+
 ## 6a: Single-Node, Totally-Available Transactions
 
 [Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/6a-transactions)
@@ -205,13 +211,13 @@ I have not done this before in Go but it was not as difficult as expected.
 [Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/6b-transactions)
 
 The challenge references a [Github issue](https://github.com/jepsen-io/maelstrom/issues/56) related to Maelstrom's ability to verify read-uncommitted transactions.
-I was able to verify this.
+I was able to reproduce this.
 Simply copy-pasting the code from 6a was enough for my system to pass Maelstrom's validity checks.
 In any case, I replicated transactions to other nodes anyways, with retries in case of partitions.
 
 ## 6c: Totally-Available, Read Committed Transactions
 
-[Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/6b-transactions)
+[Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/6c-transactions)
 
 The same code from 6b was enough to pass the challenge, as I had already implemented replication and retries.
 
