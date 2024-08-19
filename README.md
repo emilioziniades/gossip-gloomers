@@ -13,10 +13,6 @@ Nix is used to build to Go binaries and install maelstrom.
 Just is used to invoke tests with the required arguments.
 `just all` runs all the tests.
 
-<!-- TODO: replace below with actual link when it's done -->
-
-I wrote a blog post [here](https://example.com) detailing how Nix and Just made my life easier when doing these challenges.
-
 # 1: Echo
 
 [Solution](https://github.com/emilioziniades/gossip-gloomers/blob/main/cmd/1-echo/main.go)
